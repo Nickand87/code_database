@@ -1,0 +1,9 @@
+<?xml version="1.0"?>
+<settings>
+    <database>
+        <path>Database</path>
+    </database>
+    <style>
+        <selection>dark</selection>
+    </style>
+</settings>

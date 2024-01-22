@@ -1,0 +1,9 @@
+Markdown==3.5.1
+packaging==23.2
+PyQt5==5.15.10
+PyQt5-Qt5==5.15.2
+PyQt5-sip==12.13.0
+PyQt5-stubs==5.15.6.0
+QDarkStyle==3.2.3
+QtPy==2.4.1
+shiboken6==6.6.1
