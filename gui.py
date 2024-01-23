@@ -1,8 +1,7 @@
-
-# PyQt5 imports
+import csv
 from PyQt5.QtWidgets import (QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
                              QLabel, QLineEdit, QPushButton, QListWidget, QFormLayout,
-                             QFrame, QMessageBox, QComboBox, QInputDialog, QApplication)
+                             QFrame, QMessageBox, QComboBox, QInputDialog, QApplication, QFileDialog, QTableWidget, QTableWidgetItem)
 from PyQt5.QtGui import QFont, QIntValidator, QRegExpValidator
 from PyQt5.QtCore import QRegExp
 
@@ -22,19 +21,19 @@ class ClientWindow(QMainWindow):
         self.db_manager = db_manager
 
         # Initialize all instance attributes
-        self.game_name_entry = None
-        self.game_product_code_entry = None
+        self.product_name_entry = None
+        self.product_code_entry = None
         self.product_code_type_entry = None
         self.use_status_entry = None
         self.submit_button = None
         self.load_button = None
         self.delete_button = None
         self.clear_button = None
-        self.game_code_list = None
+        self.product_code_table = None
         self.code_search_bar = None
 
         self.initializeUI()
-        self.search_game_codes("")
+        self.search_product_codes("")
 
     def initializeUI(self):
         """Initializes the main UI components of the window."""
@@ -45,7 +44,8 @@ class ClientWindow(QMainWindow):
         main_layout = QVBoxLayout(central_widget)
         self.setupInputFields(main_layout)
         self.setupButtons(main_layout)
-        self.setupGameCodeList(main_layout)
+        self.setupUploadButton(main_layout)
+        self.setupProductCodeList(main_layout)
 
     def setupInputFields(self, layout):
         """Sets up input fields for client and contact information."""
@@ -53,6 +53,12 @@ class ClientWindow(QMainWindow):
         layout.addLayout(input_layout)
 
         self.setupProductInfo(input_layout)
+
+    def setupUploadButton(self, layout):
+        """Sets up the upload button for CSV files."""
+        upload_button = QPushButton("Upload CSV")
+        upload_button.clicked.connect(self.openFileDialog)
+        layout.addWidget(upload_button)  # Adjust this placement as needed
 
     def setupProductInfo(self, layout):
         """Sets up client information input fields."""
@@ -68,18 +74,18 @@ class ClientWindow(QMainWindow):
         product_title.setFont(label_font)
         product_layout.addRow(product_title)
 
-        self.game_name_entry = EnterLineEdit()
-        self.game_product_code_entry = EnterLineEdit()
+        self.product_name_entry = EnterLineEdit()
+        self.product_code_entry = EnterLineEdit()
         self.product_code_type_entry = QComboBox()
         self.use_status_entry = QComboBox()
 
         # Combobox options
-        self.product_code_type_entry.addItems(["Full Product", "Expansion/Addon"])
-        self.use_status_entry.addItems((["Available", "Used"]))
+        self.product_code_type_entry.addItems(["Unknown", "Full Product", "Expansion/Addon"])
+        self.use_status_entry.addItems((["Unknown", "Available", "Used"]))
 
         for label_text, widget in [
-            ("Product Name:", self.game_name_entry),
-            ("Product Code:", self.game_product_code_entry),
+            ("Product Name:", self.product_name_entry),
+            ("Product Code:", self.product_code_entry),
             ("Product Code Type:", self.product_code_type_entry),
             ("Status:", self.use_status_entry),
         ]:
@@ -111,112 +117,128 @@ class ClientWindow(QMainWindow):
         button_layout.addWidget(self.clear_button)
 
         self.clear_button.clicked.connect(self.clear_fields)
-        self.submit_button.clicked.connect(self.submit_game_code)
-        self.delete_button.clicked.connect(self.delete_game_code)
+        self.submit_button.clicked.connect(self.submit_product_code)
+        self.delete_button.clicked.connect(self.delete_product_code)
         self.load_button.clicked.connect(self.load_selected_game_code)
 
-    def setupGameCodeList(self, layout):
-        """Sets up the client list UI component."""
+    def setupProductCodeList(self, layout):
         hbox = QHBoxLayout()
 
         self.code_search_bar = QLineEdit()
-        self.code_search_bar.setPlaceholderText("Search game codes...")
-        self.code_search_bar.textChanged.connect(self.search_game_codes)
+        self.code_search_bar.setPlaceholderText("Search product codes...")
+        self.code_search_bar.textChanged.connect(self.search_product_codes)
         layout.addWidget(self.code_search_bar)
 
-        self.game_code_list = QListWidget()
-        self.game_code_list.setAlternatingRowColors(True)
-        self.game_code_list.itemDoubleClicked.connect(self.load_game_code_data)
-        self.game_code_list.itemDoubleClicked.connect(self.copy_product_code)
-        hbox.addWidget(self.game_code_list)
+        # Use QTableWidget instead of QListWidget
+        self.product_code_table = QTableWidget()
+        self.product_code_table.setRowCount(0)
+        self.product_code_table.setColumnCount(5)  # Adjust the number of columns as needed
+        self.product_code_table.setHorizontalHeaderLabels(["ID", "Product Name", "Product Code", "Code Type", "Status"])
+        self.product_code_table.setAlternatingRowColors(True)
+
+        # Set selection behavior to select entire rows
+        self.product_code_table.setSelectionBehavior(QTableWidget.SelectRows)
+        self.product_code_table.setSelectionMode(QTableWidget.SingleSelection)
+
+        # Make table read-only (non-editable)
+        self.product_code_table.setEditTriggers(QTableWidget.NoEditTriggers)
+
+        self.product_code_table.itemDoubleClicked.connect(self.load_product_code_data)
+        self.product_code_table.itemDoubleClicked.connect(self.copy_product_code)
+
+        hbox.addWidget(self.product_code_table)
 
         layout.addLayout(hbox)
 
-    def submit_game_code(self):
+    def submit_product_code(self):
         """Submits or updates a game code in the database."""
-        product_code = self.game_product_code_entry.text()
-        game_code_data = {
-            'game_name': self.game_name_entry.text(),
+        product_code = self.product_code_entry.text()
+        product_code_data = {
+            'product_name': self.product_name_entry.text(),
             'product_code': product_code,
             'code_type': self.product_code_type_entry.currentText(),
             'used_status': self.use_status_entry.currentText()
         }
 
         # Check if the product code already exists
-        query = "SELECT * FROM game_codes WHERE product_code = ?"
+        query = "SELECT * FROM product_codes WHERE product_code = ?"
         existing_game_code = self.db_manager.fetch_data('Codes.db', query, (product_code,))
 
         if existing_game_code:
             # Update existing record
-            self.db_manager.write_data('Codes.db', 'game_codes', 'product_code', game_code_data)
-            QMessageBox.information(self, "Updated", "Game code updated successfully.")
+            self.db_manager.write_data('Codes.db', 'product_codes', 'product_code', product_code_data)
+            QMessageBox.information(self, "Updated", "Product code updated successfully.")
         else:
             # Insert new record
-            self.db_manager.add_new_entry('Codes.db', 'game_codes', game_code_data)
-            QMessageBox.information(self, "Added", "New game code added successfully.")
+            self.db_manager.add_new_entry('Codes.db', 'product_codes', product_code_data)
+            QMessageBox.information(self, "Added", "New product code added successfully.")
 
         # Reload the list box with current search criteria
         current_search_text = self.code_search_bar.text()
-        self.search_game_codes(current_search_text)
+        self.search_product_codes(current_search_text)
 
-    def delete_game_code(self):
+    def delete_product_code(self):
         """Deletes the selected game code after confirmation."""
-        item = self.game_code_list.currentItem()
-        if not item:
-            QMessageBox.warning(self, "Selection Required", "Please select a game code to delete.")
+        selected_items = self.product_code_table.selectedItems()
+        if not selected_items:
+            QMessageBox.warning(self, "Selection Required", "Please select a product code to delete.")
             return
 
+        # Assuming the first column of your table is the primary key for deletion
+        primary_key = int(selected_items[0].text())  # Adjust the index if needed
+
         text, ok = QInputDialog.getText(self, "Confirm Delete", "Type 'delete' to confirm:")
-        if ok and text == "delete":
-            primary_key = int(item.text().split(':')[0].strip())
-            if self.db_manager.delete_data('Codes.db', 'game_codes', f'id = {primary_key}'):
-                self.search_game_codes(self.code_search_bar.text())  # Refresh the list
-                QMessageBox.information(self, "Deleted", "Game code deleted successfully.")
+        if ok and text.lower() == 'delete':
+            if self.db_manager.delete_data('Codes.db', 'product_codes', f'id = {primary_key}'):
+                self.search_product_codes(self.code_search_bar.text())  # Refresh the list
+                QMessageBox.information(self, "Deleted", "Product code deleted successfully.")
             else:
-                QMessageBox.critical(self, "Error", "Failed to delete game code.")
+                QMessageBox.critical(self, "Error", "Failed to delete product code.")
         else:
             QMessageBox.information(self, "Cancelled", "Delete operation cancelled.")
 
     def load_selected_game_code(self):
         """Load the currently selected game code data into the input fields."""
-        item = self.game_code_list.currentItem()
+        item = self.product_code_table.currentItem()
         if not item:
             QMessageBox.warning(self, "Selection Required", "Please select a game code from the list.")
             return
 
-        self.load_game_code_data(item)
+        self.load_product_code_data(item)
 
-    def search_game_codes(self, text):
+    def search_product_codes(self, text):
         """Searches for clients based on the provided text."""
         if not text.strip():
             query = """
-                SELECT id, game_name, product_code, code_type, used_status 
-                FROM game_codes 
-                ORDER BY game_name
+                SELECT id, product_name, product_code, code_type, used_status 
+                FROM product_codes 
+                ORDER BY product_name
             """
             parameters = ()
         else:
             query = """
-                SELECT id, game_name, product_code, code_type, used_status
-                FROM game_codes
-                WHERE product_code LIKE ? OR game_name LIKE ?
-                ORDER BY game_name
+                SELECT id, product_name, product_code, code_type, used_status
+                FROM product_codes
+                WHERE product_code LIKE ? OR product_name LIKE ?
+                ORDER BY product_name
             """
             search_text = f"%{text}%"
             parameters = (search_text, search_text)
 
         results = self.db_manager.fetch_data('Codes.db', query, parameters)
-        self.game_code_list.clear()
-        for product_code in results:
-            self.game_code_list.addItem(f"{product_code[0]}: {product_code[1]}: {product_code[2]}: {product_code[3]}")
+        self.product_code_table.setRowCount(0)
+        for row_number, product_code in enumerate(results):
+            self.product_code_table.insertRow(row_number)
+            for column_number, data in enumerate(product_code):
+                item = QTableWidgetItem(str(data))
+                self.product_code_table.setItem(row_number, column_number, item)
 
-    def load_game_code_data(self, item):
-        """Loads game code data from the database based on the selected item's primary key."""
-        # Extract the primary key (id) from the selected item
-        primary_key = int(item.text().split(':')[0].strip())
+    def load_product_code_data(self, item):
+        row = item.row()
+        primary_key = int(self.product_code_table.item(row, 0).text())
         query = """
-            SELECT game_name, product_code, code_type, used_status
-            FROM game_codes 
+            SELECT product_name, product_code, code_type, used_status
+            FROM product_codes 
             WHERE id = ?
         """
         product_data = self.db_manager.fetch_data('Codes.db', query, (primary_key,))
@@ -224,8 +246,8 @@ class ClientWindow(QMainWindow):
         if product_data:
             self.clear_fields()
             product = product_data[0]
-            self.game_name_entry.setText(product[0])
-            self.game_product_code_entry.setText(product[1])
+            self.product_name_entry.setText(product[0])
+            self.product_code_entry.setText(product[1])
 
             # Set the current index for product_code_type_entry combo box
             product_code_type_index = self.product_code_type_entry.findText(product[2])
@@ -239,12 +261,47 @@ class ClientWindow(QMainWindow):
 
     def clear_fields(self):
         """Clears all input fields in the window."""
-        self.game_name_entry.clear()
-        self.game_product_code_entry.clear()
+        self.product_name_entry.clear()
+        self.product_code_entry.clear()
         self.product_code_type_entry.setCurrentIndex(0)  # Reset combo box to first item
         self.use_status_entry.setCurrentIndex(0)  # Reset combo box to first item
 
     def copy_product_code(self, item):
-        """Copy the Product Code from the selected item in the listbox to the clipboard."""
-        product_code = item.text().split(':')[2].strip()  # Adjust index if needed
-        QApplication.clipboard().setText(product_code)
+        """Copy the Product Code from the selected row in the table to the clipboard."""
+        row = item.row()
+        # Assuming the Product Code is in the third column (index 2)
+        product_code_item = self.product_code_table.item(row, 2)
+        if product_code_item:
+            product_code = product_code_item.text()
+            QApplication.clipboard().setText(product_code)
+
+    def openFileDialog(self):
+        """Opens a file dialog and processes the selected CSV file."""
+        options = QFileDialog.Options()
+        file_name, _ = QFileDialog.getOpenFileName(self, "Open CSV File", "",
+                                                   "CSV Files (*.csv)", options=options)
+        if file_name:
+            self.processCSV(file_name)
+
+    def processCSV(self, file_name):
+        """Reads the CSV file, checks for existing product codes, and adds new products to the database."""
+        with open(file_name, newline='', encoding='utf-8') as csvfile:
+            csvreader = csv.DictReader(csvfile)
+            for row in csvreader:
+                if not self.checkIfProductCodeExists(row['Product Code']):
+                    self.addNewProduct(row)
+
+    def checkIfProductCodeExists(self, product_code):
+        result = self.db_manager.fetch_data('Codes.db', "SELECT * FROM product_codes WHERE product_code = ?", (product_code,))
+        return len(result) > 0
+
+    def addNewProduct(self, product_data):
+        self.db_manager.add_new_entry('Codes.db', 'product_codes', {
+            'product_name': product_data['Product Name'],
+            'product_code': product_data['Product Code'],
+            'code_type': product_data['Product Code Type'],
+            'used_status': product_data['Status']
+        })
+
+        current_search_text = self.code_search_bar.text()
+        self.search_product_codes(current_search_text)

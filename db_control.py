@@ -172,8 +172,8 @@ class DatabaseManager:
 
     def initialize_codes_db(self, cursor):
         try:
-            cursor.execute('''CREATE TABLE IF NOT EXISTS game_codes 
-                               (id INTEGER PRIMARY KEY, game_name TEXT, product_code TEXT, 
+            cursor.execute('''CREATE TABLE IF NOT EXISTS product_codes 
+                               (id INTEGER PRIMARY KEY, product_name TEXT, product_code TEXT, 
                                 code_type TEXT, used_status TEXT)''')
         except sqlite3.Error as e:
             print(f"Database Error: {str(e)}")
