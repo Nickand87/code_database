@@ -7,10 +7,12 @@ from PyQt5.QtGui import QFont, QColor
 from PyQt5.QtCore import Qt
 from special_classes import EnterLineEdit
 
+
 class ClickableLineEdit(QLineEdit):
     def mouseDoubleClickEvent(self, event):
         super().mouseDoubleClickEvent(event)
         QApplication.clipboard().setText(self.text())
+
 
 class ClientWindow(QMainWindow):
     def __init__(self, db_manager):
@@ -63,6 +65,23 @@ class ClientWindow(QMainWindow):
         product_selection_frame.setFixedWidth(200)
         top_layout.addWidget(product_selection_frame)
         layout.addLayout(top_layout)
+
+        # Add Code Type Refine Dropdown
+        self.code_type_refine_combo = QComboBox()
+        self.code_type_refine_combo.addItems(["Default", "Unknown", "Full Product", "Expansion/Addon"])
+        self.code_type_refine_combo.currentTextChanged.connect(self.refine_search)
+        self.product_selection_layout.addWidget(QLabel("Code Type Refine"))
+        self.product_selection_layout.addWidget(self.code_type_refine_combo)
+
+        # Add Status Refine Dropdown
+        self.status_refine_combo = QComboBox()
+        self.status_refine_combo.addItems(["Default", "Unknown", "Unused", "Used"])
+        self.status_refine_combo.currentTextChanged.connect(self.refine_search)
+        self.product_selection_layout.addWidget(QLabel("Status Refine"))
+        self.product_selection_layout.addWidget(self.status_refine_combo)
+
+    def refine_search(self):
+        self.search_product_codes(self.code_search_bar.text())
 
     def setupProductInfo(self, layout):
         """Sets up product information input fields."""
@@ -221,25 +240,28 @@ class ClientWindow(QMainWindow):
         self.load_product_code_data(item)
 
     def search_product_codes(self, text):
-        """Searches for product codes based on the provided text."""
-        if not text.strip():
-            query = """
-                SELECT id, product_name, product_code, code_type, used_status 
-                FROM product_codes 
-                ORDER BY product_name
-            """
-            parameters = ()
-        else:
-            query = """
-                SELECT id, product_name, product_code, code_type, used_status
-                FROM product_codes
-                WHERE product_code LIKE ? OR product_name LIKE ?
-                ORDER BY product_name
-            """
-            search_text = f"%{text}%"
-            parameters = (search_text, search_text)
+        query = """
+            SELECT id, product_name, product_code, code_type, used_status
+            FROM product_codes
+            WHERE (product_code LIKE ? OR product_name LIKE ?)
+        """
+        search_text = f"%{text}%"
+        parameters = [search_text, search_text]
 
-        results = self.db_manager.fetch_data('Codes.db', query, parameters)
+        # Apply Code Type filter if not Default
+        code_type = self.code_type_refine_combo.currentText()
+        if code_type != "Default":
+            query += " AND code_type = ?"
+            parameters.append(code_type)
+
+        # Apply Status filter if not Default
+        status = self.status_refine_combo.currentText()
+        if status != "Default":
+            query += " AND used_status = ?"
+            parameters.append(status)
+
+        query += " ORDER BY product_name"
+        results = self.db_manager.fetch_data('Codes.db', query, tuple(parameters))
         self.populate_table(results)
 
     def populate_table(self, data):
