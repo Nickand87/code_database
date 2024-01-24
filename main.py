@@ -21,7 +21,7 @@ class MainWindow(QMainWindow):
         self.title_bar = CustomTitleBar(self)
         self.setMenuWidget(self.title_bar)
 
-        self.setGeometry(100, 100, 800, 600)
+        self.setGeometry(100, 100, 900, 600)
         self.db_manager = db_manager
         self.setup_ui()
 
@@ -36,7 +36,6 @@ class MainWindow(QMainWindow):
 
         # Create a status bar
         self.status_bar = QStatusBar()
-        #self.status_bar.setFixedHeight(30)
         self.setStatusBar(self.status_bar)
 
         # Initialize buttons and add them to the sidebar layout
