@@ -1,12 +1,11 @@
 import csv
-from PyQt5.QtWidgets import (QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
-                             QLabel, QLineEdit, QPushButton, QListWidget, QFormLayout,
-                             QFrame, QMessageBox, QComboBox, QInputDialog, QApplication, QFileDialog, QTableWidget, QTableWidgetItem)
-from PyQt5.QtGui import QFont, QIntValidator, QRegExpValidator
-from PyQt5.QtCore import QRegExp
-
-# Local application imports
-from special_classes import EnterLineEdit
+from PyQt5.QtWidgets import (QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit,
+                             QPushButton, QListWidget, QFormLayout, QFrame, QMessageBox,
+                             QComboBox, QInputDialog, QApplication, QFileDialog, QTableWidget,
+                             QTableWidgetItem, QHeaderView)
+from PyQt5.QtGui import QFont, QIntValidator, QRegExpValidator, QColor
+from PyQt5.QtCore import QRegExp, Qt
+from special_classes import EnterLineEdit, CustomTitleBar
 
 
 class ClickableLineEdit(QLineEdit):
@@ -44,35 +43,43 @@ class ClientWindow(QMainWindow):
         main_layout = QVBoxLayout(central_widget)
         self.setupInputFields(main_layout)
         self.setupButtons(main_layout)
-        self.setupUploadButton(main_layout)
+        self.setupUploadButton()
         self.setupProductCodeList(main_layout)
 
     def setupInputFields(self, layout):
         """Sets up input fields for client and contact information."""
-        input_layout = QHBoxLayout()
-        layout.addLayout(input_layout)
+        top_layout = QHBoxLayout()  # Horizontal layout to contain ProductInfo and ProductSelection frames
 
-        self.setupProductInfo(input_layout)
+        # ProductInfo Frame
+        product_info_frame = QFrame()
+        product_info_frame.setFrameShape(QFrame.StyledPanel)
+        product_info_layout = QFormLayout(product_info_frame)
 
-    def setupUploadButton(self, layout):
-        """Sets up the upload button for CSV files."""
-        upload_button = QPushButton("Upload CSV")
-        upload_button.clicked.connect(self.openFileDialog)
-        layout.addWidget(upload_button)  # Adjust this placement as needed
+        self.setupProductInfo(product_info_layout)
+        top_layout.addWidget(product_info_frame)  # Add ProductInfo frame to top_layout
+
+        # ProductSelection Frame
+        product_selection_frame = QFrame()
+        product_selection_frame.setFrameShape(QFrame.StyledPanel)
+        self.product_selection_layout = QVBoxLayout(product_selection_frame)  # Set the product_selection_layout
+
+        # Example widget in ProductSelection frame
+        product_selection_label = QLabel("Product Selection")
+        self.product_selection_layout.addWidget(product_selection_label)
+
+        product_selection_frame.setFixedWidth(200)
+        top_layout.addWidget(product_selection_frame)
+
+        layout.addLayout(top_layout)
 
     def setupProductInfo(self, layout):
-        """Sets up client information input fields."""
-        product_frame = QFrame()
-        product_frame.setFrameShape(QFrame.StyledPanel)
-        product_layout = QFormLayout(product_frame)
-        layout.addWidget(product_frame)
-
+        """Sets up product information input fields."""
         font = QFont("Arial", 12)
         label_font = QFont("Arial", 10, QFont.Bold)
 
         product_title = QLabel("Game Code")
         product_title.setFont(label_font)
-        product_layout.addRow(product_title)
+        layout.addRow(product_title)
 
         self.product_name_entry = EnterLineEdit()
         self.product_code_entry = EnterLineEdit()
@@ -81,7 +88,7 @@ class ClientWindow(QMainWindow):
 
         # Combobox options
         self.product_code_type_entry.addItems(["Unknown", "Full Product", "Expansion/Addon"])
-        self.use_status_entry.addItems((["Unknown", "Available", "Used"]))
+        self.use_status_entry.addItems(["Unknown", "Available", "Used"])
 
         for label_text, widget in [
             ("Product Name:", self.product_name_entry),
@@ -92,7 +99,15 @@ class ClientWindow(QMainWindow):
             label = QLabel(label_text)
             label.setFont(label_font)
             widget.setFont(font)
-            product_layout.addRow(label, widget)
+            layout.addRow(label, widget)
+
+    def setupUploadButton(self):
+        """Sets up the upload button for CSV files."""
+        upload_button = QPushButton("Upload CSV")
+        upload_button.clicked.connect(self.openFileDialog)
+
+        if self.product_selection_layout:
+            self.product_selection_layout.addWidget(upload_button)  # Add to product_selection_layout
 
     def setupButtons(self, layout):
         """Sets up buttons in the UI."""
@@ -132,8 +147,8 @@ class ClientWindow(QMainWindow):
         # Use QTableWidget instead of QListWidget
         self.product_code_table = QTableWidget()
         self.product_code_table.setRowCount(0)
-        self.product_code_table.setColumnCount(5)  # Adjust the number of columns as needed
-        self.product_code_table.setHorizontalHeaderLabels(["ID", "Product Name", "Product Code", "Code Type", "Status"])
+        self.product_code_table.setColumnCount(6)  # Adjust the number of columns as needed
+        self.product_code_table.setHorizontalHeaderLabels(["ID", "Product Name", "Product Code", "", "Code Type", "Status"])
         self.product_code_table.setAlternatingRowColors(True)
 
         # Set selection behavior to select entire rows
@@ -146,7 +161,29 @@ class ClientWindow(QMainWindow):
         self.product_code_table.itemDoubleClicked.connect(self.load_product_code_data)
         self.product_code_table.itemDoubleClicked.connect(self.copy_product_code)
 
-        hbox.addWidget(self.product_code_table)
+        # Set the horizontal stretch factor
+        hbox.addWidget(self.product_code_table, 1)
+
+        # Enable sorting and set default sorting criteria
+        self.product_code_table.setSortingEnabled(True)
+        self.product_code_table.sortByColumn(1, Qt.AscendingOrder)  # Sort by first column (ID) in ascending order by default
+
+        # Set the horizontal header to stretch and adjust with the window
+        header = self.product_code_table.horizontalHeader()
+        #header.setSectionResizeMode(QHeaderView.Stretch)
+
+        header.setSectionResizeMode(0, QHeaderView.Interactive)
+        header.setSectionResizeMode(1, QHeaderView.Interactive)
+        header.setSectionResizeMode(2, QHeaderView.Interactive)
+        header.setSectionResizeMode(3, QHeaderView.Stretch)
+        header.setSectionResizeMode(4, QHeaderView.Interactive)
+        header.setSectionResizeMode(5, QHeaderView.Interactive)
+
+        self.product_code_table.setColumnWidth(0, 50)
+        self.product_code_table.setColumnWidth(1, 200)
+        self.product_code_table.setColumnWidth(2, 150)
+        self.product_code_table.setColumnWidth(4, 110)
+        self.product_code_table.setColumnWidth(5, 110)
 
         layout.addLayout(hbox)
 
@@ -207,7 +244,7 @@ class ClientWindow(QMainWindow):
         self.load_product_code_data(item)
 
     def search_product_codes(self, text):
-        """Searches for clients based on the provided text."""
+        """Searches for product codes based on the provided text."""
         if not text.strip():
             query = """
                 SELECT id, product_name, product_code, code_type, used_status 
@@ -226,12 +263,35 @@ class ClientWindow(QMainWindow):
             parameters = (search_text, search_text)
 
         results = self.db_manager.fetch_data('Codes.db', query, parameters)
+        self.populate_table(results)
+
+    def populate_table(self, data):
+        self.product_code_table.setSortingEnabled(False)
         self.product_code_table.setRowCount(0)
-        for row_number, product_code in enumerate(results):
+        grey_color = QColor(25, 35, 45)  # Light grey color
+
+        for row_number, row_data in enumerate(data):
             self.product_code_table.insertRow(row_number)
-            for column_number, data in enumerate(product_code):
+            for column_number, data in enumerate(row_data):
                 item = QTableWidgetItem(str(data))
-                self.product_code_table.setItem(row_number, column_number, item)
+                adjusted_column_number = column_number if column_number < 3 else column_number + 1
+                self.product_code_table.setItem(row_number, adjusted_column_number, item)
+
+                # Center-align data in specific columns (e.g., 0, 4, 5)
+                if adjusted_column_number in [0, 2, 4, 5]:
+                    item.setTextAlignment(Qt.AlignCenter)
+
+                # Set the background color for the blank column
+                if adjusted_column_number == 3:
+                    item.setBackground(grey_color)
+
+                # Inserting the blank cell with grey background
+                if column_number == 2:
+                    blank_item = QTableWidgetItem("")
+                    blank_item.setBackground(grey_color)
+                    self.product_code_table.setItem(row_number, column_number + 1, blank_item)
+
+        self.product_code_table.setSortingEnabled(True)
 
     def load_product_code_data(self, item):
         row = item.row()
