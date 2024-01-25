@@ -267,6 +267,16 @@ class ClientWindow(QMainWindow):
     def populate_table(self, data):
         self.product_code_table.setSortingEnabled(False)
         self.product_code_table.setRowCount(0)
+
+        self.product_code_table.setAlternatingRowColors(True)
+        #self.product_code_table.setStyleSheet("alternate-background-color: #f0f0f0; background-color: #ffffff;")
+
+        for row_number, row_data in enumerate(data):
+            self.product_code_table.insertRow(row_number)
+            for column_number, data in enumerate(row_data):
+                item = QTableWidgetItem(str(data))
+                self.product_code_table.setItem(row_number, column_number, item)
+
         table_color = QColor(25, 35, 45)  # Light grey color
 
         for row_number, row_data in enumerate(data):

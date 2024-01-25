@@ -10,6 +10,9 @@ def dark_style():
        QListWidget {
            alternate-background-color: #505050;
        }
+       QTableWidget {
+            alternate-background-color: #9DA9B5; background-color: #60798B;
+        }
        """
 
     # Combine the default stylesheet with the custom rules

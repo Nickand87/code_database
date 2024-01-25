@@ -14,7 +14,7 @@ class MainWindow(QMainWindow):
     """Main window of the application."""
     def __init__(self, db_manager):
         super().__init__()
-        self.setWindowTitle("Metrology Stuff")
+        self.setWindowTitle("Tools")
 
         self.setWindowFlags(Qt.FramelessWindowHint)
 
