@@ -14,7 +14,7 @@ class MainWindow(QMainWindow):
     """Main window of the application."""
     def __init__(self, db_manager):
         super().__init__()
-        self.setWindowTitle("Tools")
+        self.setWindowTitle("Fools")
 
         self.setWindowFlags(Qt.FramelessWindowHint)
 
@@ -39,7 +39,7 @@ class MainWindow(QMainWindow):
         self.setStatusBar(self.status_bar)
 
         # Initialize buttons and add them to the sidebar layout
-        self.button1 = QPushButton("Clients")
+        self.button1 = QPushButton("Product Codes")
         self.button1.setMinimumHeight(25)
         self.button1.clicked.connect(lambda: self.switch_page(0))
         sidebar_layout.addWidget(self.button1)

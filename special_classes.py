@@ -38,7 +38,7 @@ class CustomTitleBar(QWidget):
 
     def setupLabels(self):
         """ Sets up the labels in the title bar. """
-        self.title_label = QLabel("Metrology Stuff")
+        self.title_label = QLabel("Game Tools")
         self.layout.addWidget(self.title_label)
         self.layout.addStretch()
 

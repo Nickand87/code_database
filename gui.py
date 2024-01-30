@@ -268,17 +268,6 @@ class ClientWindow(QMainWindow):
         self.product_code_table.setSortingEnabled(False)
         self.product_code_table.setRowCount(0)
 
-        self.product_code_table.setAlternatingRowColors(True)
-        #self.product_code_table.setStyleSheet("alternate-background-color: #f0f0f0; background-color: #ffffff;")
-
-        for row_number, row_data in enumerate(data):
-            self.product_code_table.insertRow(row_number)
-            for column_number, data in enumerate(row_data):
-                item = QTableWidgetItem(str(data))
-                self.product_code_table.setItem(row_number, column_number, item)
-
-        table_color = QColor(25, 35, 45)  # Light grey color
-
         for row_number, row_data in enumerate(data):
             self.product_code_table.insertRow(row_number)
             for column_number, data in enumerate(row_data):
@@ -286,19 +275,12 @@ class ClientWindow(QMainWindow):
                 adjusted_column_number = column_number if column_number < 3 else column_number + 1
                 self.product_code_table.setItem(row_number, adjusted_column_number, item)
 
-                # Center-align data in specific columns (e.g., 0, 4, 5)
                 if adjusted_column_number in [0, 2, 4, 5]:
                     item.setTextAlignment(Qt.AlignCenter)
 
-                # Set the background color for the blank column
-                if adjusted_column_number == 3:
-                    item.setBackground(table_color)
-
-                # Inserting the blank cell with grey background
-                if column_number == 2:
+                if column_number == 3:
                     blank_item = QTableWidgetItem("")
-                    blank_item.setBackground(table_color)
-                    self.product_code_table.setItem(row_number, column_number + 1, blank_item)
+                    self.product_code_table.setItem(row_number, column_number, blank_item)
 
         self.product_code_table.setSortingEnabled(True)
 
